@@ -1,0 +1,65 @@
+{
+  "version": "CCAV_V1_FROZEN",
+  "timestamp": "2026-07-06T09:35:00Z",
+  "entry_point": "nginx :443",
+  "upstreams": {
+    "ccav_gateway_ha": {
+      "primary": {"host": "127.0.0.1", "port": 8000, "systemd": "ccav-gateway"},
+      "standby": {"host": "127.0.0.1", "port": 8002, "systemd": "ccav-gateway-2"},
+      "failover_ms": "<1000",
+      "retry_tries": 2,
+      "retry_on": ["error", "timeout", "http_502", "http_503"]
+    },
+    "ccav_data_proxy_ha": {
+      "primary": {"host": "127.0.0.1", "port": 8001, "systemd": "ccav-data-proxy"},
+      "standby": {"host": "127.0.0.1", "port": 8003, "systemd": "ccav-data-proxy-2"},
+      "failover_ms": "<1000",
+      "retry_tries": 2,
+      "retry_on": ["error", "timeout", "http_502", "http_503"]
+    }
+  },
+  "services": {
+    "node": {"port": 3001, "systemd": "ccav-api", "framework": "Express", "role": "business-core"},
+    "gateway": {"port": 8000, "systemd": "ccav-gateway", "framework": "FastAPI", "role": "execution-primary"},
+    "gateway_standby": {"port": 8002, "systemd": "ccav-gateway-2", "framework": "FastAPI", "role": "execution-standby"},
+    "data_proxy": {"port": 8001, "systemd": "ccav-data-proxy", "framework": "FastAPI", "role": "data-router-primary"},
+    "data_proxy_standby": {"port": 8003, "systemd": "ccav-data-proxy-2", "framework": "FastAPI", "role": "data-router-standby"},
+    "shadow_write": {"port": null, "systemd": "ccav-shadow-write", "interval_s": 30, "role": "sqlite-to-pg-sync"},
+    "form_server": {"port": 9091, "systemd": "ccav-form-server", "role": "registration-form"},
+    "admin_frontend": {"port": 3002, "systemd": null, "role": "admin-ui", "auth": "basic"}
+  },
+  "databases": {
+    "postgresql": {
+      "host": "localhost",
+      "port": 5432,
+      "database": "ccav_core",
+      "user": "ccav_admin",
+      "version": "16.14",
+      "tables_synced": ["users", "courses", "experts"],
+      "tables_pg_only": ["logs"],
+      "role": "primary_read"
+    },
+    "sqlite": {
+      "path": "/opt/ccav-api/ccav.db",
+      "tables_total": 18,
+      "role": "write_source_and_fallback"
+    }
+  },
+  "rate_limiting": {
+    "nginx_global": {"zone": "ccav_api_limit", "rate": "5r/s", "burst": 20},
+    "nginx_gateway_dryrun": {"zone": "ccav_gateway_api", "burst": 50},
+    "nginx_register": {"zone": "ccav_register", "rate": "5r/s", "burst": 10},
+    "gateway_middleware": {"rate": "30 req/s", "per": "IP", "window": "sliding 1s", "burst": 60}
+  },
+  "health_endpoints": {
+    "system_wide": "GET /api/v1/status",
+    "providers": "GET /api/v1/providers/health",
+    "gateway": "GET /health",
+    "node": "GET /api/health"
+  },
+  "ai_providers": {
+    "kling": {"status": "余额不足", "code": 1102},
+    "kimi": {"status": "账户暂停"},
+    "replicate": {"status": "缺少 API key"}
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "project": "CCAV",
+  "phase": "V1 Production Freeze",
+  "generated": "2026-07-06",
+  "authority": "CTO Final Closure",
+  "tasks": [
+    {
+      "id": "CP-0001",
+      "action": "Gateway startup & verification",
+      "status": "DONE",
+      "summary": "Venv Python 启动 api_gateway.py 在 8000 端口，health 返回 200",
+      "output": "Gateway running on :8000, /health → 200 OK"
+    },
+    {
+      "id": "CP-0003",
+      "action": "External access fix",
+      "status": "DONE",
+      "summary": "nginx upstream 从 18080 改为 8000",
+      "output": "公网 /gateway-api/health 可达"
+    },
+    {
+      "id": "CP-0004",
+      "action": "nginx upstream consistency",
+      "status": "DONE",
+      "summary": "统一 nginx upstream 指向 gateway :8000"
+    },
+    {
+      "id": "CP-0005",
+      "action": "rate-limit burst adjustment",
+      "status": "DONE",
+      "summary": "burst 5→50，Gateway dry-run 限流放宽",
+      "output": "内部 100/100 通过"
+    },
+    {
+      "id": "CP-0006",
+      "action": "rate-limit burst tuning",
+      "status": "DONE",
+      "summary": "进一步调整 nginx limit_req burst 参数"
+    },
+    {
+      "id": "CP-SYS-001",
+      "action": "Node systemd daemon",
+      "status": "DONE",
+      "summary": "ccav-api.service — Node Express 在 :3001，开机自启，重启自动恢复",
+      "output": "systemctl enable ccav-api"
+    },
+    {
+      "id": "CP-SYS-002",
+      "action": "Gateway systemd daemon",
+      "status": "DONE",
+      "summary": "ccav-gateway.service — FastAPI 在 :8000，开机自启",
+      "output": "systemctl enable ccav-gateway"
+    },
+    {
+      "id": "CP-OBS-001",
+      "action": "Observability baseline",
+      "status": "DONE",
+      "summary": "创建 /var/log/ccav/，配置日志分割、cp-state.json，健康检查脚本",
+      "output": "所有组件日志汇聚至 /var/log/ccav/"
+    },
+    {
+      "id": "CP-API-001",
+      "action": "API standardization",
+      "status": "DONE",
+      "summary": "nginx 路由 /api/node/* → :3001, /api/gateway/* → :8000",
+      "output": "统一入口，双后端路由"
+    },
+    {
+      "id": "CP-VER-API-001",
+      "action": "API versioning",
+      "status": "DONE",
+      "summary": "新增 /api/v1/node/* 和 /api/v1/gateway/*，旧路径保留",
+      "output": "向后兼容的版本化 API"
+    },
+    {
+      "id": "CP-DATA-001",
+      "action": "PostgreSQL installation",
+      "status": "DONE",
+      "summary": "安装 PostgreSQL 16.14，创建数据库 ccav_core，用户 ccav_admin，4 张表 (users, courses, experts, logs)",
+      "output": "PG ready at localhost:5432"
+    },
+    {
+      "id": "CP-DATA-002",
+      "action": "Shadow write layer",
+      "status": "DONE",
+      "summary": "dual-write-daemon.py — 触发器将 SQLite 写入镜像至 PostgreSQL，不修改 Node 读逻辑",
+      "output": "30s 循环同步，0 errors"
+    },
+    {
+      "id": "CP-DATA-003",
+      "action": "Consistency validation",
+      "status": "DONE",
+      "summary": "validate_dual_write.py — 确认 11/11 行一致，延迟 <5ms",
+      "output": "100% 一致"
+    },
+    {
+      "id": "CP-DATA-004",
+      "action": "Migration readiness assessment",
+      "status": "DONE",
+      "summary": "评估报告：READY_FOR_PRIMARY_CUTOVER，风险低",
+      "output": "migration-decision.json"
+    },
+    {
+      "id": "CP-DATA-006",
+      "action": "Data proxy layer",
+      "status": "DONE",
+      "summary": "FastAPI sidecar 代理 (:8001)，拦截 /api/node/* 读请求直连 PG，写请求双写",
+      "output": "Data proxy primary on :8001"
+    },
+    {
+      "id": "CP-DATA-007",
+      "action": "Data consistency monitoring",
+      "status": "DONE",
+      "summary": "cron/5min → data-consistency-monitor.py，4 项检查 (row diff, latency, drift, proxy correctness)，0 issues",
+      "output": "/var/log/ccav/data-consistency-monitor.json → verdict: PASS"
+    },
+    {
+      "id": "CP-L3-001",
+      "action": "L3 Provider deployment",
+      "status": "DONE",
+      "summary": "修复 /api/v1/generate 500，接入 SSOT 14 Provider，/api/v1/providers 列出全部能力",
+      "output": "L3 execution layer deployed to Gateway runtime"
+    },
+    {
+      "id": "CP-L3-002",
+      "action": "AI execution migration to Gateway",
+      "status": "DONE",
+      "summary": "nginx 拦截所有 AI 路径转发至 Gateway，Gateway 新增 clients.py (220行) 及 11 条 AI 路由",
+      "output": "Kling/Kimi/Replicate 全部走 Gateway"
+    },
+    {
+      "id": "CP-OPS-001",
+      "action": "External provider health",
+      "status": "DONE",
+      "summary": "/api/v1/providers/health 端点，诊断 Kling(余额不足 1102), Kimi(账户暂停), Replicate(缺 key)",
+      "output": "均非系统问题，商业依赖需人工处理"
+    },
+    {
+      "id": "CP-HA-001",
+      "action": "Gateway HA deployment",
+      "status": "DONE",
+      "summary": "gateway-2.service 在 :8002，nginx upstream ccav_gateway_ha = primary + standby，failover <1s",
+      "output": "Gateway HA cluster verified"
+    },
+    {
+      "id": "CP-SRE-001",
+      "action": "Data Proxy HA + production hardening",
+      "status": "DONE",
+      "summary": "data-proxy-2 (:8003), nginx upstream ccav_data_proxy_ha; Gateway 速率限制中间件 30/s; 502 retry; /api/v1/status 聚合端点",
+      "output": "CCAV_V1_FROZEN.json snapshotted"
+    }
+  ],
+  "total_tasks": 21,
+  "all_completed": true,
+  "system_frozen": true
+}
